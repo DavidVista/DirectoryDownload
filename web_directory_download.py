@@ -64,7 +64,7 @@ def parse_webpage(url: str, credentials: dict, paths: dict, headless: bool):
         for key, value in dict_files.items():
             move_to_download_folder(paths["download"] + key, value)
     except FileNotFoundError as e:
-        print(f"The path to the source file({e.args['path']})")
+        print(f"The path to the source file is wrong")
 
 
 def parse_directory(cur_path: str, element: WebElement, driver: webdriver.Chrome):
@@ -80,6 +80,7 @@ def parse_directory(cur_path: str, element: WebElement, driver: webdriver.Chrome
     # Parsing directory or file name
     try:
         dir_name = element.find_elements(By.CLASS_NAME, "fp-filename")[0].text
+        dir_name = remove_symbols(dir_name)
         if dir_name in visited_files:
             return
         cur_path = cur_path + "/" + dir_name
@@ -92,6 +93,7 @@ def parse_directory(cur_path: str, element: WebElement, driver: webdriver.Chrome
                 block = child.find_elements(By.TAG_NAME, "table")[0]
                 file = block.find_element(By.CLASS_NAME, "fp-filename-icon").find_element(By.TAG_NAME, "a")
                 file_name = block.find_elements(By.CLASS_NAME, "fp-filename")[0].text
+                file_name = remove_symbols(file_name)
                 driver.get(file.get_attribute("href"))
                 if file_name:
                     dict_files.setdefault(file_name, cur_path + "/" + file_name)
@@ -116,7 +118,8 @@ def move_to_download_folder(old_path: str, new_path: str) -> None:
     :return: None
     """
     if not os.path.exists(old_path):
-        raise FileNotFoundError(path=old_path)
+        print(f"Wrong path: {old_path}")
+        return
     with open(old_path, "rb") as old_file:
         try:
             new_file = open(new_path, "wb")
@@ -125,6 +128,26 @@ def move_to_download_folder(old_path: str, new_path: str) -> None:
         except FileNotFoundError:
             print(f"The path {new_path} is incorrect!")
     os.remove(old_path)
+
+
+def remove_symbols(path: str):
+    """
+    Remove illegal symbols from the string according to the rules of Windows
+
+    :param path: the path string
+    :return: the edited string
+    """
+    path = path.replace("<", "")
+    path = path.replace(">", "")
+    path = path.replace(":", "")
+    path = path.replace('"', "")
+    path = path.replace("/", "")
+    path = path.replace("\\", "")
+    path = path.replace("|", "")
+    path = path.replace("?", "")
+    path = path.replace("*", "")
+
+    return path
 
 
 if __name__ == '__main__':
